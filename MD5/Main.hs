@@ -13,16 +13,17 @@ import Data.Char
 import qualified Data.ByteString          as BS
 import qualified Data.ByteString.Internal as BS
 import qualified Data.ByteString.Lazy     as BSL
+import Data.ByteString.Char8              as BSC
 import qualified Data.ByteString.Builder  as BSB
 
-import Text.Hex
+import Data.ByteString.Base16 as BS
 
 import Foreign.ForeignPtr
 
 import Control.Monad
 import Control.Monad.State -- strict or lazy
 
-md5 :: BS.ByteString -> Text
+md5 :: BS.ByteString -> BS.ByteString
 md5 xs = showWord128 $ execState (go . cast . padding $ xs) (a0,b0,c0,d0) where
   s :: V.Vector Int
   s = [ 7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22
@@ -118,13 +119,13 @@ md5 xs = showWord128 $ execState (go . cast . padding $ xs) (a0,b0,c0,d0) where
     put (a+a',b+b',c+c',d+d')
     go ms
 
-  showWord128 :: (Word32,Word32,Word32,Word32) -> Text
-  showWord128 (x,y,z,w) = encodeHex . BSL.toStrict . BSB.toLazyByteString $ builder where
+  showWord128 :: (Word32,Word32,Word32,Word32) -> BS.ByteString
+  showWord128 (x,y,z,w) = BS.encode . BSL.toStrict . BSB.toLazyByteString $ builder where
     builder = BSB.word32LE x
-          <> BSB.word32LE y
-          <> BSB.word32LE z
-          <> BSB.word32LE w
+           <> BSB.word32LE y
+           <> BSB.word32LE z
+           <> BSB.word32LE w
 
 main = do
   xs <- BS.getLine
-  print $ md5 xs
+  BSC.putStrLn $ md5 xs
