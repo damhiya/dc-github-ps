@@ -18,7 +18,7 @@ import Data.ByteString.Base16 as BS16
 import Foreign.ForeignPtr
 
 import Control.Monad
-import Control.Monad.State -- strict or lazy
+import Control.Monad.State
 
 s :: V.Vector Int
 s = [ 7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22
@@ -86,22 +86,22 @@ md5 xs = showWord128 $ execState (go . convert $ xs) (a0,b0,c0,d0) where
       (a,b,c,d) <- get
       let f = d `xor` (b .&. (c `xor` d))
           g = i
-      update i a b c d f g
+      f `seq` g `seq` update i a b c d f g
     forM_ ([16..31]::[Int]) $ \i -> do
       (a,b,c,d) <- get
       let f = c `xor` (d .&. (b `xor` c))
           g = (5*i+1) `mod` 16
-      update i a b c d f g
+      f `seq` g `seq` update i a b c d f g
     forM_ ([32..47]::[Int]) $ \i -> do
       (a,b,c,d) <- get
       let f = b `xor` c `xor` d
           g = (3*i+5) `mod` 16
-      update i a b c d f g
+      f `seq` g `seq` update i a b c d f g
     forM_ ([48..63]::[Int]) $ \i -> do
       (a,b,c,d) <- get
       let f = c `xor` (b .|. (complement d))
           g = (7*i) `mod` 16
-      update i a b c d f g
+      f `seq` g `seq` update i a b c d f g
     where
       update :: Int -> Word32 -> Word32 -> Word32 -> Word32 -> Word32 -> Int ->
                 State (Word32,Word32,Word32,Word32) ()
@@ -111,14 +111,18 @@ md5 xs = showWord128 $ execState (go . convert $ xs) (a0,b0,c0,d0) where
             b' = b + rotateL f' (s!i)
             c' = b
             d' = c
-        put (a',b',c',d')
+        a' `seq` b' `seq` c' `seq` d' `seq` put (a',b',c',d')
 
   go :: [V.Vector Word32] -> State (Word32, Word32, Word32, Word32) ()
   go [] = return ()
   go (m:ms) = do
     (a,b,c,d) <- get
-    let (a',b',c',d') = execState (trans m) (a,b,c,d)
-    put (a+a',b+b',c+c',d+d')
+    let (da,db,dc,dd) = execState (trans m) (a,b,c,d)
+        a' = a + da
+        b' = b + db
+        c' = c + dc
+        d' = d + dd
+    a' `seq` b' `seq` c' `seq` d' `seq` put (a',b',c',d')
     go ms
 
   showWord128 :: (Word32,Word32,Word32,Word32) -> BS.ByteString
