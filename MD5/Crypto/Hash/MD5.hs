@@ -17,8 +17,7 @@ import Data.ByteString.Base16 as BS16
 
 import Foreign.ForeignPtr
 
-import Control.Monad
-import Control.Monad.State
+import Control.Category ((>>>))
 
 s :: V.Vector Int
 s = [ 7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22
@@ -52,6 +51,16 @@ b0 = 0xefcdab89 :: Word32
 c0 = 0x98badcfe :: Word32
 d0 = 0x10325476 :: Word32
 
+type Pack = (Word32,Word32,Word32,Word32)
+
+addp x y = z1 `seq` z2 `seq` z3 `seq` z4 `seq` (z1,z2,z3,z4) where
+  (x1,x2,x3,x4) = x
+  (y1,y2,y3,y4) = y
+  z1 = x1 + y1
+  z2 = x2 + y2
+  z3 = x3 + y3
+  z4 = x4 + y4
+
 convert :: BS.ByteString -> [V.Vector Word32]
 convert xs = go 64 id . padding $ xs where
   padding :: BS.ByteString -> [BS.ByteString]
@@ -79,55 +88,40 @@ convert xs = go 64 id . padding $ xs where
     ptr' = plusForeignPtr ptr offset
 
 md5 :: BS.ByteString -> BS.ByteString
-md5 xs = showWord128 $ execState (go . convert $ xs) (a0,b0,c0,d0) where
-  trans :: V.Vector Word32 -> State (Word32,Word32,Word32,Word32) ()
-  trans m = do
-    forM_ ([0..15]::[Int]) $ \i -> do
-      (a,b,c,d) <- get
-      let f = d `xor` (b .&. (c `xor` d))
-          g = i
-      f `seq` g `seq` update i a b c d f g
-    forM_ ([16..31]::[Int]) $ \i -> do
-      (a,b,c,d) <- get
-      let f = c `xor` (d .&. (b `xor` c))
-          g = (5*i+1) `mod` 16
-      f `seq` g `seq` update i a b c d f g
-    forM_ ([32..47]::[Int]) $ \i -> do
-      (a,b,c,d) <- get
-      let f = b `xor` c `xor` d
-          g = (3*i+5) `mod` 16
-      f `seq` g `seq` update i a b c d f g
-    forM_ ([48..63]::[Int]) $ \i -> do
-      (a,b,c,d) <- get
-      let f = c `xor` (b .|. (complement d))
-          g = (7*i) `mod` 16
-      f `seq` g `seq` update i a b c d f g
+md5 xs = showWord128 . go . convert $ xs where
+  go :: [V.Vector Word32] -> Pack
+  go ms = foldl (\p m -> p `addp` trans m p) (a0,b0,c0,d0) ms
+
+  trans :: V.Vector Word32 -> Pack -> Pack
+  trans m = (fold 0 15 $ \(a,b,c,d) i ->
+              let f = d `xor` (b .&. (c `xor` d))
+                  g = i
+              in f `seq` g `seq` update i a b c d f g)
+        >>> (fold 16 31 $ \(a,b,c,d) i ->
+              let f = c `xor` (d .&. (b `xor` c))
+                  g = (5*i+1) `mod` 16
+              in f `seq` g `seq` update i a b c d f g)
+        >>> (fold 32 47 $ \(a,b,c,d) i ->
+              let f = b `xor` c `xor` d
+                  g = (3*i+5) `mod` 16
+              in f `seq` g `seq` update i a b c d f g)
+        >>> (fold 48 63 $ \(a,b,c,d) i ->
+              let f = c `xor` (b .|. (complement d))
+                  g = (7*i) `mod` 16
+              in f `seq` g `seq` update i a b c d f g)
     where
-      update :: Int -> Word32 -> Word32 -> Word32 -> Word32 -> Word32 -> Int ->
-                State (Word32,Word32,Word32,Word32) ()
-      update i a b c d f g = do
-        let f' = f + a + (k!i) + (m!g)
-            a' = d
-            b' = b + rotateL f' (s!i)
-            c' = b
-            d' = c
-        a' `seq` b' `seq` c' `seq` d' `seq` put (a',b',c',d')
+      fold i j f b = foldl f b ([i..j] :: [Int])
+      update i a b c d f g = a' `seq` b' `seq` c' `seq` d' `seq` (a',b',c',d') where
+        f' = f + a + (k!i) + (m!g)
+        a' = d
+        b' = b + rotateL f' (s!i)
+        c' = b
+        d' = c
 
-  go :: [V.Vector Word32] -> State (Word32, Word32, Word32, Word32) ()
-  go [] = return ()
-  go (m:ms) = do
-    (a,b,c,d) <- get
-    let (da,db,dc,dd) = execState (trans m) (a,b,c,d)
-        a' = a + da
-        b' = b + db
-        c' = c + dc
-        d' = d + dd
-    a' `seq` b' `seq` c' `seq` d' `seq` put (a',b',c',d')
-    go ms
-
-  showWord128 :: (Word32,Word32,Word32,Word32) -> BS.ByteString
-  showWord128 (x,y,z,w) = BS16.encode . BSL.toStrict . BSB.toLazyByteString $ builder where
+  showWord128 :: Pack -> BS.ByteString
+  showWord128 (x,y,z,w) = run builder where
     builder = BSB.word32LE x
            <> BSB.word32LE y
            <> BSB.word32LE z
            <> BSB.word32LE w
+    run = BS16.encode . BSL.toStrict . BSB.toLazyByteString
