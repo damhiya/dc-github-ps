@@ -73,21 +73,21 @@ md5 xs = showWord128 . go . convert $ xs where
   trans m = ($(tfold xs1) $ \(a,b,c,d) (i,s,k) ->
               let f = d `xor` (b .&. (c `xor` d))
                   g = i
-              in f `seq` g `seq` update i a b c d f g s k)
+              in f `seq` g `seq` update a b c d f g s k)
         >>> ($(tfold xs2) $ \(a,b,c,d) (i,s,k) ->
               let f = c `xor` (d .&. (b `xor` c))
                   g = (5*i+1) `mod` 16
-              in f `seq` g `seq` update i a b c d f g s k)
+              in f `seq` g `seq` update a b c d f g s k)
         >>> ($(tfold xs3) $ \(a,b,c,d) (i,s,k) ->
               let f = b `xor` c `xor` d
                   g = (3*i+5) `mod` 16
-              in f `seq` g `seq` update i a b c d f g s k)
+              in f `seq` g `seq` update a b c d f g s k)
         >>> ($(tfold xs4) $ \(a,b,c,d) (i,s,k) ->
               let f = c `xor` (b .|. (complement d))
                   g = (7*i) `mod` 16
-              in f `seq` g `seq` update i a b c d f g s k)
+              in f `seq` g `seq` update a b c d f g s k)
     where
-      update i a b c d f g s k = a' `seq` b' `seq` c' `seq` d' `seq` (a',b',c',d') where
+      update a b c d f g s k = a' `seq` b' `seq` c' `seq` d' `seq` (a',b',c',d') where
         f' = f + a + k + (m!g)
         a' = d
         b' = b + rotateL f' s
