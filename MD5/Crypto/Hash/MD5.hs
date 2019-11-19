@@ -6,11 +6,11 @@ module Crypto.Hash.MD5 (md5) where
 import Data.Word
 import Data.Bits
 
-import Data.Vector.Storable ((!))
 import qualified Data.Vector.Storable as V
 
 import qualified Data.ByteString          as BS
 import qualified Data.ByteString.Internal as BS
+import qualified Data.ByteString.Unsafe   as BS
 import qualified Data.ByteString.Lazy     as BSL
 import qualified Data.ByteString.Builder  as BSB
 
@@ -55,9 +55,10 @@ convert xs = go 64 id . padding $ xs where
             | otherwise = error "length mismatch"
   go n f (xs:xss) = if n > m
     then go (n-m) (f . (xs:)) xss
-    else (cast . mconcat . f $ [ys]) : go 64 id (zs:xss) where
+    else let v = (cast . mconcat . f $ [ys]) in v `seq` v : go 64 id (zs:xss) where
       m = BS.length xs
-      (ys,zs) = BS.splitAt n xs
+      ys = BS.unsafeTake n xs
+      zs = BS.unsafeDrop n xs
 
   cast :: BS.ByteString -> V.Vector Word32
   cast xs = V.unsafeFromForeignPtr0 ptr' 16 where
@@ -88,7 +89,7 @@ md5 xs = showWord128 . go . convert $ xs where
               in f `seq` g `seq` update a b c d f g s k)
     where
       update a b c d f g s k = a' `seq` b' `seq` c' `seq` d' `seq` (a',b',c',d') where
-        f' = f + a + k + (m!g)
+        f' = f + a + k + V.unsafeIndex m g
         a' = d
         b' = b + rotateL f' s
         c' = b
