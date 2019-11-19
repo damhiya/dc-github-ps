@@ -33,10 +33,10 @@ k4 =  [ 0xf4292244, 0x432aff97, 0xab9423a7, 0xfc93a039
       , 0xf7537e82, 0xbd3af235, 0x2ad7d2bb, 0xeb86d391
       ]
 
-xs1 = zip3 ([0 ..15]::[Int]) s1 k1 :: [(Int,Int,Word32)]
-xs2 = zip3 ([16..31]::[Int]) s2 k2 :: [(Int,Int,Word32)]
-xs3 = zip3 ([32..47]::[Int]) s3 k3 :: [(Int,Int,Word32)]
-xs4 = zip3 ([48..63]::[Int]) s4 k4 :: [(Int,Int,Word32)]
+xs1 = zip3 [0 ..15] s1 k1 :: [(Int,Int,Word32)]
+xs2 = zip3 [16..31] s2 k2 :: [(Int,Int,Word32)]
+xs3 = zip3 [32..47] s3 k3 :: [(Int,Int,Word32)]
+xs4 = zip3 [48..63] s4 k4 :: [(Int,Int,Word32)]
 
 tfold :: Lift a => [a] -> Q Exp
 tfold []      = [| \f y -> y |]
