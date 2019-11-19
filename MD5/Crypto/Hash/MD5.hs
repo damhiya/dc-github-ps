@@ -38,37 +38,36 @@ addp x y = z1 `seq` z2 `seq` z3 `seq` z4 `seq` (z1,z2,z3,z4) where
   z3 = x3 + y3
   z4 = x4 + y4
 
-convert :: BS.ByteString -> [V.Vector Word32]
-convert xs = go 64 id . padding $ xs where
-  padding :: BS.ByteString -> [BS.ByteString]
-  padding xs = run builder where
-    n     = fromIntegral $ BS.length xs
-    nzero = fromIntegral $ 64 - (n + 1 + 8) `mod` 64
-    builder = BSB.byteString xs
-           <> BSB.word8 0x80
-           <> BSB.byteString (BS.replicate nzero 0)
-           <> BSB.word64LE (n*8)
-    run = BSL.toChunks . BSB.toLazyByteString
+convert :: BS.ByteString -> ([V.Vector Word32], [V.Vector Word32])
+convert xs = (toVectos p0 n0, toVectos p1 n1) where
+  (p0,n0,p1,n1) = trim xs
 
-  go :: Int -> ([BS.ByteString] -> [BS.ByteString]) -> [BS.ByteString] -> [V.Vector Word32]
-  go n f [] | n == 64   = []
-            | otherwise = error "length mismatch"
-  go n f (xs:xss) = if n > m
-    then go (n-m) (f . (xs:)) xss
-    else let v = (cast . mconcat . f $ [ys]) in v `seq` v : go 64 id (zs:xss) where
-      m = BS.length xs
-      ys = BS.unsafeTake n xs
-      zs = BS.unsafeDrop n xs
-
-  cast :: BS.ByteString -> V.Vector Word32
-  cast xs = V.unsafeFromForeignPtr0 ptr' 16 where
+  trim :: BS.ByteString -> (ForeignPtr Word32, Int, ForeignPtr Word32, Int)
+  trim xs = (p0,n0,p1,n1) where
     (ptr,offset,length) = BS.toForeignPtr xs
-    ptr' = plusForeignPtr ptr offset
+    p0 = plusForeignPtr ptr offset
+    n0 = length `div` 64
+
+    nzero = 64 - (length + 1 + 8) `mod` 64
+    builder = BSB.byteString (BS.unsafeDrop (n0 * 64) xs)
+           <> BSB.word8       0x80
+           <> BSB.byteString (BS.replicate nzero 0)
+           <> BSB.word64LE   (fromIntegral $ length * 8)
+    xs' = BSL.toStrict . BSB.toLazyByteString $ builder
+
+    (ptr',offset',length') = BS.toForeignPtr xs'
+    p1 = plusForeignPtr ptr' offset'
+    n1 = length' `div` 64
+  
+  toVectos :: ForeignPtr Word32 -> Int -> [V.Vector Word32]
+  toVectos p n = map (\i -> V.unsafeFromForeignPtr p (i*16) 16) [0..n-1]
 
 md5 :: BS.ByteString -> BS.ByteString
-md5 xs = showWord128 . go . convert $ xs where
-  go :: [V.Vector Word32] -> Pack
-  go ms = foldl (\p m -> p `addp` trans m p) (a0,b0,c0,d0) ms
+md5 xs = showWord128 . go ms2 . go ms1 $ (a0,b0,c0,d0) where
+  (ms1, ms2) = convert xs
+
+  go :: [V.Vector Word32] -> Pack -> Pack
+  go ms p = foldl (\p m -> p `addp` trans m p) p ms
 
   trans :: V.Vector Word32 -> Pack -> Pack
   trans m = ($(tfold xs1) $ \(a,b,c,d) (i,s,k) ->
