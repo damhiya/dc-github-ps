@@ -5,6 +5,12 @@ module Crypto.Hash.Template where
 import Data.Word
 import Language.Haskell.TH.Syntax
 
+g1,g2,g3,g4 :: [Int]
+g1 = map (\i -> i               ) [0 ..15]
+g2 = map (\i -> (5*i+1) `mod` 16) [16..31]
+g3 = map (\i -> (3*i+5) `mod` 16) [32..47]
+g4 = map (\i -> (7*i)   `mod` 16) [48..63]
+
 s1,s2,s3,s4 :: [Int]
 s1 = [7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22]
 s2 = [5,  9, 14, 20, 5,  9, 14, 20, 5,  9, 14, 20, 5,  9, 14, 20]
@@ -33,10 +39,11 @@ k4 =  [ 0xf4292244, 0x432aff97, 0xab9423a7, 0xfc93a039
       , 0xf7537e82, 0xbd3af235, 0x2ad7d2bb, 0xeb86d391
       ]
 
-xs1 = zip3 [0 ..15] s1 k1 :: [(Int,Int,Word32)]
-xs2 = zip3 [16..31] s2 k2 :: [(Int,Int,Word32)]
-xs3 = zip3 [32..47] s3 k3 :: [(Int,Int,Word32)]
-xs4 = zip3 [48..63] s4 k4 :: [(Int,Int,Word32)]
+xs1,xs2,xs3,xs4 :: [(Int,Int,Word32)]
+xs1 = zip3 g1 s1 k1
+xs2 = zip3 g2 s2 k2
+xs3 = zip3 g3 s3 k3
+xs4 = zip3 g4 s4 k4
 
 tfold :: Lift a => [a] -> Q Exp
 tfold []      = [| \f y -> y |]

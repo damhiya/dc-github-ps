@@ -70,25 +70,18 @@ md5 xs = showWord128 . go ms2 . go ms1 $ (a0,b0,c0,d0) where
   go ms p = foldl (\p m -> p `addp` trans m p) p ms
 
   trans :: V.Vector Word32 -> Pack -> Pack
-  trans m = ($(tfold xs1) $ \(a,b,c,d) (i,s,k) ->
-              let f = d `xor` (b .&. (c `xor` d))
-                  g = i
-              in f `seq` g `seq` update a b c d f g s k)
-        >>> ($(tfold xs2) $ \(a,b,c,d) (i,s,k) ->
-              let f = c `xor` (d .&. (b `xor` c))
-                  g = (5*i+1) `mod` 16
-              in f `seq` g `seq` update a b c d f g s k)
-        >>> ($(tfold xs3) $ \(a,b,c,d) (i,s,k) ->
-              let f = b `xor` c `xor` d
-                  g = (3*i+5) `mod` 16
-              in f `seq` g `seq` update a b c d f g s k)
-        >>> ($(tfold xs4) $ \(a,b,c,d) (i,s,k) ->
-              let f = c `xor` (b .|. (complement d))
-                  g = (7*i) `mod` 16
-              in f `seq` g `seq` update a b c d f g s k)
+  trans m = ($(tfold xs1) $ update f1)
+        >>> ($(tfold xs2) $ update f2)
+        >>> ($(tfold xs3) $ update f3)
+        >>> ($(tfold xs4) $ update f4)
     where
-      update a b c d f g s k = a' `seq` b' `seq` c' `seq` d' `seq` (a',b',c',d') where
-        f' = f + a + k + V.unsafeIndex m g
+      f1 b c d = d `xor` (b .&. (c `xor` d))
+      f2 b c d = c `xor` (d .&. (b `xor` c))
+      f3 b c d = b `xor` c `xor` d
+      f4 b c d = c `xor` (b .|. (complement d))
+
+      update f (a,b,c,d) (g,s,k) = (a',b',c',d') where
+        f' = f b c d + a + k + V.unsafeIndex m g
         a' = d
         b' = b + rotateL f' s
         c' = b
