@@ -14,8 +14,13 @@ import Crypto.Hash.MD5
 main :: IO ()
 main = do
   fs <- getArgs
-  forM_ fs $ \f -> do
-    x <- BS.readFile f
-    BSC.putStr (md5 x)
-    BSC.putStr "  "
-    putStrLn f
+  if fs == []
+    then do
+      x <- BS.getLine
+      BSC.putStr (md5 x)
+      BSC.putStr "  stdin\n"
+    else forM_ fs $ \f -> do
+      x <- BS.readFile f
+      BSC.putStr (md5 x)
+      BSC.putStr "  "
+      putStrLn f
