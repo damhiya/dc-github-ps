@@ -2,7 +2,7 @@
 {-# LANGUAGE UnboxedTuples    #-}
 {-# LANGUAGE TemplateHaskell  #-}
 
-module Crypto.Hash.MD5 (md5) where
+module Crypto.Hash.MD5 (MD5Digest(..), md5) where
 
 import GHC.Base
 import GHC.Word
@@ -14,13 +14,53 @@ import qualified Data.ByteString.Unsafe   as BS
 import qualified Data.ByteString.Lazy     as BSL
 import qualified Data.ByteString.Builder  as BSB
 
-import Data.ByteString.Base16 as BS16
-
 import Crypto.Hash.Template
 
-type Pack# = (# Word#, Word#, Word#, Word# #)
-type HState# s = (# State# s, Pack# #)
+data MD5Digest  = MD5Digest {-# UNPACK #-} !Word32
+                            {-# UNPACK #-} !Word32
+                            {-# UNPACK #-} !Word32
+                            {-# UNPACK #-} !Word32
+
+type Pack#      = (# Word#, Word#, Word#, Word# #)
+type HState# s  = (# State# s, Pack# #)
 type Operation# = Word# -> Word# -> Word# -> Word#
+
+instance Show MD5Digest where
+  show (MD5Digest (W32# x) (W32# y) (W32# z) (W32# w)) = r where
+    r =
+      [ c0 x, c1 x, c2 x, c3 x, c4 x, c5 x, c6 x, c7 x
+      , c0 y, c1 y, c2 y, c3 y, c4 y, c5 y, c6 y, c7 y
+      , c0 z, c1 z, c2 z, c3 z, c4 z, c5 z, c6 z, c7 z
+      , c0 w, c1 w, c2 w, c3 w, c4 w, c5 w, c6 w, c7 w
+      ]
+    c0 x = toChar (uncheckedShiftRL# x 4#  `and#` 15##)
+    c1 x = toChar (uncheckedShiftRL# x 0#  `and#` 15##)
+    c2 x = toChar (uncheckedShiftRL# x 12# `and#` 15##)
+    c3 x = toChar (uncheckedShiftRL# x 8#  `and#` 15##)
+    c4 x = toChar (uncheckedShiftRL# x 20# `and#` 15##)
+    c5 x = toChar (uncheckedShiftRL# x 16# `and#` 15##)
+    c6 x = toChar (uncheckedShiftRL# x 28# `and#` 15##)
+    c7 x = toChar (uncheckedShiftRL# x 24# `and#` 15##)
+    toChar x = case x of
+      0##  -> '0'
+      1##  -> '1'
+      2##  -> '2'
+      3##  -> '3'
+      4##  -> '4'
+      5##  -> '5'
+      6##  -> '6'
+      7##  -> '7'
+      8##  -> '8'
+      9##  -> '9'
+      10## -> 'a'
+      11## -> 'b'
+      12## -> 'c'
+      13## -> 'd'
+      14## -> 'e'
+      15## -> 'f'
+
+cast :: Pack# -> MD5Digest
+cast (# x, y, z, w #) = MD5Digest (W32# x) (W32# y) (W32# z) (W32# w)
 
 addp# :: Pack# -> Pack# -> Pack#
 addp# x y = (# z1, z2, z3, z4 #) where
@@ -55,8 +95,8 @@ convert xs = (p0,n0,p1,n1) where
   p1 = plusForeignPtr ptr' offset'
   n1 = length' `div` 64
 
-md5 :: BS.ByteString -> BS.ByteString
-md5 xs = showWord128 result where
+md5 :: BS.ByteString -> MD5Digest
+md5 xs = cast result where
   a = 0x67452301##
   b = 0xefcdab89##
   c = 0x98badcfe##
@@ -108,11 +148,3 @@ md5 xs = showWord128 result where
       rotL# x i = narrow32Word# (hi `or#` lo) where
         hi = x `uncheckedShiftL#` i
         lo = x `uncheckedShiftRL#` (32# -# i)
-
-  showWord128 :: Pack# -> BS.ByteString
-  showWord128 (# x, y, z, w #) = run builder where
-    builder = BSB.word32LE (W32# x)
-           <> BSB.word32LE (W32# y)
-           <> BSB.word32LE (W32# z)
-           <> BSB.word32LE (W32# w)
-    run = BS16.encode . BSL.toStrict . BSB.toLazyByteString
