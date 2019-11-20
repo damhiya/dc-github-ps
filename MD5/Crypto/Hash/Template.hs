@@ -47,4 +47,4 @@ xs4 = zip3 g4 s4 k4
 
 tfold :: Lift a => [a] -> Q Exp
 tfold []      = [| \f y -> y |]
-tfold (x:xs)  = [| \f y -> $(tfold xs) f (f y x) |]
+tfold (x:xs)  = [| \f y -> $(tfold xs) f (f x y) |]
