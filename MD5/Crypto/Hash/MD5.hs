@@ -41,7 +41,7 @@ foldl# f# y# (x:xs) = foldl# f# (f# y# x) xs
 f# >>># g# = \x# -> g# (f# x#)
 
 convert :: BS.ByteString -> ([V.Vector Word32], [V.Vector Word32])
-convert xs = (toVectos p0 n0, toVectos p1 n1) where
+convert xs = (toVectors p0 n0, toVectors p1 n1) where
   (p0,n0,p1,n1) = trim xs
 
   trim :: BS.ByteString -> (ForeignPtr Word32, Int, ForeignPtr Word32, Int)
@@ -61,8 +61,8 @@ convert xs = (toVectos p0 n0, toVectos p1 n1) where
     p1 = plusForeignPtr ptr' offset'
     n1 = length' `div` 64
   
-  toVectos :: ForeignPtr Word32 -> Int -> [V.Vector Word32]
-  toVectos p n = map (\i -> V.unsafeFromForeignPtr p (i*16) 16) [0..n-1]
+  toVectors :: ForeignPtr Word32 -> Int -> [V.Vector Word32]
+  toVectors p n = map (\i -> V.unsafeFromForeignPtr p (i*16) 16) [0..n-1]
 
 md5 :: BS.ByteString -> BS.ByteString
 md5 xs = showWord128 (go# ms2 (go# ms1 (# a#,b#,c#,d# #))) where
@@ -78,9 +78,9 @@ md5 xs = showWord128 (go# ms2 (go# ms1 (# a#,b#,c#,d# #))) where
 
   trans# :: V.Vector Word32 -> Pack# -> Pack#
   trans# m = ($(tfold xs1) (update f1#))
-       >>># ($(tfold xs2) (update f2#))
-       >>># ($(tfold xs3) (update f3#))
-       >>># ($(tfold xs4) (update f4#))
+        >>># ($(tfold xs2) (update f2#))
+        >>># ($(tfold xs3) (update f3#))
+        >>># ($(tfold xs4) (update f4#))
     where
       f1# b# c# d# = d# `xor#` (b# `and#` (c# `xor#` d#))
       f2# b# c# d# = c# `xor#` (d# `and#` (b# `xor#` c#))
