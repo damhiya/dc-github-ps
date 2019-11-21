@@ -71,10 +71,6 @@ addp# x y = (# z1, z2, z3, z4 #) where
   z3 = x3 `plusWord#` y3
   z4 = x4 `plusWord#` y4
 
-foldl# :: (HState# s -> a -> HState# s) -> HState# s -> [a] -> HState# s
-foldl# f# y [] = y
-foldl# f# y (x:xs) = foldl# f# (f# y x) xs
-
 (>>>#) :: (HState# s -> HState# s) -> (HState# s -> HState# s) -> (HState# s -> HState# s)
 f# >>># g# = \x -> g# (f# x)
 
