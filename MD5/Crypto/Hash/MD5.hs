@@ -84,7 +84,7 @@ convert xs = (p0,n0,p1,n1) where
   p0 = plusForeignPtr ptr offset
   n0 = length `div` 64
 
-  nzero = 64 - (length + 1 + 8) `mod` 64
+  nzero = negate (length + 1 + 8) `mod` 64
   builder = BSB.byteString (BS.unsafeDrop (n0 * 64) xs)
          <> BSB.word8       0x80
          <> BSB.byteString (BS.replicate nzero 0)
