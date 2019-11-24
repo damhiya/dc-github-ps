@@ -10,37 +10,32 @@ module QSort where
 
 import GHC.TypeLits
 
-type family If (p :: Bool) (x :: k) (y :: k) :: k
-type instance If 'True  x y = x
-type instance If 'False x y = y
-
 type family FilterLE (t :: Nat) (xs :: [Nat]) (ys :: [Nat]) :: [Nat]
 type instance FilterLE t '[]    ys = ys
-type instance FilterLE t (x:xs) ys =
-  If (x <=? t)
-    (FilterLE t xs (x:ys))
-    (FilterLE t xs ys)
+type instance FilterLE t (x:xs) ys = FilterLE_If (x <=? t) t x xs ys
+
+type family FilterLE_If (p :: Bool) (t :: Nat) (x :: Nat) (xs :: [Nat]) (ys :: [Nat]) :: [Nat]
+type instance FilterLE_If 'True  t x xs ys = FilterLE t xs (x:ys)
+type instance FilterLE_If 'False t x xs ys = FilterLE t xs ys
 
 type family FilterGT (t :: Nat) (xs :: [Nat]) (ys :: [Nat]) :: [Nat]
 type instance FilterGT t '[]    ys = ys
-type instance FilterGT t (x:xs) ys =
-  If (x <=? t)
-    (FilterGT t xs ys)
-    (FilterGT t xs (x:ys))
+type instance FilterGT t (x:xs) ys = FilterGT_If (x <=? t) t x xs ys
 
-type family Null (xs :: [a]) :: Bool
-type instance Null '[]    = 'True
-type instance Null (x:xs) = 'False
+type family FilterGT_If (p :: Bool) (t :: Nat) (x :: Nat) (xs :: [Nat]) (ys :: [Nat]) :: [Nat]
+type instance FilterGT_If 'True  t x xs ys = FilterGT t xs ys
+type instance FilterGT_If 'False t x xs ys = FilterGT t xs (x:ys)
 
 type family QSortD (xs :: [Nat]) (ys :: [Nat]) :: [Nat]
 type instance QSortD '[]  ys = ys
-type instance QSortD (x:xs) ys =
-  If (Null xs)
-    (x:ys)
-    (QSortD (FilterLE x xs '[])
-      (x :
-        (QSortD (FilterGT x xs '[])
-          ys)))
+type instance QSortD (x:xs) ys = CaseNonNull x xs ys
+
+type family CaseNonNull (x :: Nat) (xs :: [Nat]) (ys :: [Nat]) :: [Nat]
+type instance CaseNonNull x '[] ys = x:ys
+type instance CaseNonNull x (x':xs) ys =
+  QSortD
+    (FilterLE x (x':xs) '[])
+    (x : QSortD (FilterGT x (x':xs) '[]) ys)
 
 type family QSort (xs :: [Nat]) :: [Nat]
 type instance QSort xs = QSortD xs '[]
