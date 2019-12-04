@@ -43,11 +43,8 @@ unconsRZs (z@(RZ i _):zs) = Just (toZ z, maphead (focusRZ i) zs) where
 newtype Board = Board {runBoard :: Z (RZ (Int, Int, Int))}
 
 instance Show Board where
-  show b = intercalate "\n" (show <$> xss) ++ "\n" where
+  show b = intercalate "\n" (show <$> xss) where
     xss = toLL b
-    -- xss = toLLWithPos b
-    toLLWithPos :: Board -> [[(Int,Int,Int)]]
-    toLLWithPos (Board zz) = Z.toList $ Z.toList . toZ <$> zz
 
 data Dir = L | R | U | D
 
@@ -162,6 +159,9 @@ mapWithPos f ass = go ass 0 where
   go (as:ass) y = go' y as 0 : go ass (y+1)
   go' y [] _     = []
   go' y (a:as) x = f (x,y) a : go' y as (x+1)
+
+-- toLLWithPos :: Board -> [[(Int,Int,Int)]]
+-- toLLWithPos (Board zz) = Z.toList $ Z.toList . toZ <$> zz
 
 successors :: Board -> [(Int, Board)]
 successors b = catMaybes $ (flip move b) <$> [L,R,U,D]

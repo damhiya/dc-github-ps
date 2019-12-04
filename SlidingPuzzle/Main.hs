@@ -2,16 +2,14 @@ module Main where
 
 import Board
 import IDAS
+import Control.Monad
 
-xss :: [[Int]]
-xss =
-  [ [5,1,3,4]
-  , [2,0,6,7]
-  , [9,10,12,8]
-  , [13,14,11,15]
-  ]
+main = do
+  let n = 4
+  xss <- replicateM n readLn
+  let b0 = fromLL xss
+      h0 = manhattan b0
+      sol = runIDAS successors h0 b0
 
-b = fromLL xss
-h0 = manhattan b
-
-main = return ()
+  putChar '\n'
+  mapM_ (print >=> const (putChar '\n')) sol
