@@ -13,3 +13,4 @@ main = do
 
   putChar '\n'
   mapM_ (print >=> const (putChar '\n')) sol
+  putStrLn $ (show $ length sol) ++ "moves"

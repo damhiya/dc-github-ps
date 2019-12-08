@@ -1,3 +1,5 @@
 *.hi
 *.o
 Main
+Gen*
+data*

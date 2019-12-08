@@ -23,7 +23,8 @@ runIDAS succs h0 n0 = loop h0 where
         else fold1 rs
     where
       f = g + h
-      rs = map (\(dh, n') -> go (n':p) (g+1) (h+dh) b) (succs $ head p)
+      ss = succs $ head p
+      rs = map (\(dh, n') -> go (n':p) (g+1) (h+dh) b) ss
       fold1 [r] = r
       fold1 (r:rs) = case r of
         Left b1 -> case fold1 rs of
