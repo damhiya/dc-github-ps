@@ -21,7 +21,7 @@ instance Show Value where
   show (Number (Right x)) = show x
   show True  = "true"
   show False = "false"
-  show Null  = "nul" 
+  show Null  = "null"
 
 showMap :: (Show a, Show b) => [(a,b)] -> P.String
 showMap [] = "{}"
