@@ -27,4 +27,4 @@ showMap :: (Show a, Show b) => [(a,b)] -> P.String
 showMap [] = "{}"
 showMap ((x,y):xs) = ("{"++) . shows x . (":"++) . shows y . go xs $ "}" where
   go [] = id
-  go ((x,y):xs) = (", "++) . shows x . (":"++) . shows y . go xs
+  go ((x,y):xs) = (","++) . shows x . (":"++) . shows y . go xs
