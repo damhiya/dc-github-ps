@@ -27,10 +27,7 @@ object = try (P.char '{' >> ws >> P.char '}' >> return [])
      <|>     (P.char '{' >> members <* P.char '}')
 
 members :: Parser [(T.Text, J.Value)]
-members = do
-  p <- member
-  ps <- many (P.char ',' >> member)
-  return (p:ps)
+members = (:) <$> member <*> many (P.char ',' >> member)
 
 member :: Parser (T.Text, J.Value)
 member = (,)
@@ -43,10 +40,7 @@ array = try (P.char '[' >> ws >> P.char ']' >> return [])
     <|>     (P.char '[' >> elements <* P.char ']')
 
 elements :: Parser [J.Value]
-elements = do
-  e <- element
-  es <- many (P.char ',' >> element)
-  return (e:es)
+elements = (:) <$> element <*> many (P.char ',' >> element)
 
 element :: Parser J.Value
 element = ws >> value <* ws
@@ -97,7 +91,7 @@ hex = do
 number :: Parser (Either Integer Double)
 number = do
   i <- integer
-  try (do {f <- fraction; e <- exponent; return (Right $ float i f e)}) <|> return (Left i)
+  try (Right <$> (float i <$> fraction <*> exponent)) <|> return (Left i)
   where
     float i f e = (fromInteger i + f) * 10 ** fromIntegral e
 
@@ -131,11 +125,7 @@ onenine = do
   return (ord c - ord '0')
 
 fraction :: Parser Double
-fraction = do
-  P.char '.'
-  ds <- digits
-  let f = toFraction ds
-  return f
+fraction = P.char '.' >> toFraction <$> digits
   where
     toFraction [x] = fromIntegral x
     toFraction (x:xs) = fromIntegral x + (toFraction xs) / 10.0
