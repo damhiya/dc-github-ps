@@ -20,9 +20,6 @@ namespace Min
   data Heap : (a : Type) -> (o : Ordered a to) -> Type where
     MkHeap : Leftist a o s p -> Heap a o
 
-  -- OrdereredMaybe : Ordered a to => Ordered (Maybe a) (OrderMaybe to)
-  -- OrdereredMaybe = %implementation
-
   LTEM : (to : a -> a -> Type) -> Maybe a -> Maybe a -> Type
   LTEM = OrderMaybe
 
@@ -77,3 +74,7 @@ namespace Min
 
   singleton : (x : a) -> Heap a o
   singleton x = MkHeap (Node x Nil Nil LTEZero OrderJN OrderJN)
+
+  merge : Heap a o -> Heap a o -> Heap a o
+  merge (MkHeap h1) (MkHeap h2) with (mergeLeftist h1 h2)
+    | (_ ** _ ** _ ** h) = MkHeap h
