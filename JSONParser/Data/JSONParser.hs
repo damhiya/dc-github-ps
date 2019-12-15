@@ -87,24 +87,23 @@ hex = try (fromNumber <$> P.satisfy number)
 
 number :: Parser (Either Integer Double)
 number = do
+  s <- minus
   i <- integer
-  try (Right <$> (float i <$> fraction <*> exponent)) <|> return (Left i)
+  makeNumber s i
   where
-    float i f e = (fromInteger i + f) * 10 ** fromIntegral e
+    makeNumber s i = try (fmap Right $ makeFloat s i <$> fraction <*> (try exponent <|> return 0))
+                 <|> try (fmap Right $ makeFloat s i 0.0 <$> exponent)
+                 <|> return (Left $ makeInteger s i)
+    makeFloat s i f e = if s then -x else x where
+      x = (fromIntegral i + f) * 10 ** fromIntegral e
+    makeInteger s i = if s then -i else i
+
+minus :: Parser Bool
+minus = try (P.char '-' >> return True) <|> return False
 
 integer :: Parser Integer
-integer = do
-  s <- sign
-  ds <- num
-  let n = toInteger 0 ds
-  if s
-    then return (negate n)
-    else return n
+integer = toInteger 0 <$> (try ((:) <$> onenine <*> digits) <|> (:[]) <$> digit)
   where
-    sign = try (P.char '-' >> return True)
-       <|> return False
-    num  = try ((:) <$> onenine <*> digits)
-       <|> (:[]) <$> digit
     toInteger n [] = n
     toInteger n (x:xs) = toInteger (10*n + fromIntegral x) xs
 
@@ -128,21 +127,16 @@ fraction = P.char '.' >> toFraction <$> digits
     toFraction (x:xs) = fromIntegral x / 10.0 + (toFraction xs) / 10.0
 
 exponent :: Parser Int
-exponent = try exponent' <|> return 0
+exponent = (try (P.char 'E') <|> P.char 'e') >> makeInt <$> sign <*> digits
   where
-    exponent' = do
-      try (P.char 'E') <|> P.char 'e'
-      s <- sign
-      ds <- digits
-      let e = toInt 0 ds
-      if s
-        then return (-e)
-        else return e
-    sign = try (P.char '+' >> return False)
-       <|> try (P.char '-' >> return True)
-       <|> return False
+    makeInt s ds = let e = toInt 0 ds in if s then -e else e
     toInt n [] = n
     toInt n (x:xs) = toInt (10*n + x) xs
+
+sign :: Parser Bool
+sign = try (P.char '+' >> return False)
+   <|> try (P.char '-' >> return True)
+   <|> return False
 
 ws :: Parser ()
 ws = try (P.char ' '  >> ws)
