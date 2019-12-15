@@ -67,9 +67,9 @@ escape = try (char '\"' >> return '\"')
      <|> (char 'u' >> hex4)
 
 hex4 :: Parser Char
-hex4 = chr <$> (cons <$> hex <*> hex <*> hex <*> hex)
+hex4 = makeChar <$> hex <*> hex <*> hex <*> hex
   where
-    cons x y z w = ((x*16 + y)*16 + z)*16 + w
+    makeChar x y z w = chr $ ((x*16 + y)*16 + z)*16 + w
 
 hex :: Parser Int
 hex = try (fromNumber <$> satisfy number)
