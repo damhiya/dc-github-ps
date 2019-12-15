@@ -52,16 +52,15 @@ characters :: Parser String
 characters = many character
 
 character :: Parser Char
-character = try (satisfy p)
-        <|> (P.char '\\' >> escape)
+character = try (satisfy p) <|> (P.char '\\' >> escape)
   where
-    p c = let o = ord c
-          in 0x20 <= o && o <= 0x10ffff && c /= '\"' && c /= '\\'
+    p c = 0x20 <= o && o <= 0x10ffff && c /= '\"' && c /= '\\' where
+      o = ord c
 
 escape :: Parser Char
 escape = try (P.char '\"' >> return '\"')
      <|> try (P.char '\\' >> return '\\')
-     <|> try (P.char '/'  >> return '/')
+     <|> try (P.char '/'  >> return '/' )
      <|> try (P.char 'b'  >> return '\b')
      <|> try (P.char 'f'  >> return '\f')
      <|> try (P.char 'n'  >> return '\n')
@@ -70,23 +69,21 @@ escape = try (P.char '\"' >> return '\"')
      <|> (P.char 'u' >> hex4)
 
 hex4 :: Parser Char
-hex4 = do
-  h3 <- hex
-  h2 <- hex
-  h1 <- hex
-  h0 <- hex
-  let n = ((h3*16 + h2)*16 + h1)*16 + h0
-  return (chr n)
+hex4 = chr <$> (cons <$> hex <*> hex <*> hex <*> hex)
+  where
+    cons x y z w = ((x*16 + y)*16 + z)*16 + w
 
 hex :: Parser Int
-hex = do
-  c <- P.hexDigit
-  let o = ord c
-  if o >= 97
-    then return (o - ord 'a' + 10)
-    else if o >= 65
-      then return (o - ord 'A' + 10)
-      else return (o - ord '0')
+hex = try (fromNumber <$> P.satisfy number)
+  <|> try (fromUpper  <$> P.satisfy upper )
+  <|> try (fromLower  <$> P.satisfy lower )
+  where
+    number c = '0' <= c && c <= '9'
+    upper  c = 'A' <= c && c <= 'F'
+    lower  c = 'a' <= c && c <= 'f'
+    fromNumber c = ord c - ord '0'
+    fromUpper  c = ord c - ord 'A' + 10
+    fromLower  c = ord c - ord 'a' + 10
 
 number :: Parser (Either Integer Double)
 number = do
@@ -99,7 +96,7 @@ integer :: Parser Integer
 integer = do
   s <- sign
   ds <- num
-  let n = toInteger ds
+  let n = toInteger 0 ds
   if s
     then return (negate n)
     else return n
@@ -108,8 +105,8 @@ integer = do
        <|> return False
     num  = try ((:) <$> onenine <*> digits)
        <|> (:[]) <$> digit
-    toInteger [x] = fromIntegral x
-    toInteger (x:xs) = 10 * (fromIntegral x) + toInteger xs
+    toInteger n [] = n
+    toInteger n (x:xs) = toInteger (10*n + fromIntegral x) xs
 
 digits :: Parser [Int]
 digits = many1 digit
@@ -127,8 +124,8 @@ onenine = do
 fraction :: Parser Double
 fraction = P.char '.' >> toFraction <$> digits
   where
-    toFraction [x] = fromIntegral x
-    toFraction (x:xs) = fromIntegral x + (toFraction xs) / 10.0
+    toFraction [] = 0.0
+    toFraction (x:xs) = fromIntegral x / 10.0 + (toFraction xs) / 10.0
 
 exponent :: Parser Int
 exponent = try exponent' <|> return 0
