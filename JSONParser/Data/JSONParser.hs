@@ -23,8 +23,7 @@ value = try (J.Object <$> object)
     <|> (P.string "null" >> return J.Null)
 
 object :: Parser [(T.Text, J.Value)]
-object = try (P.char '{' >> ws >> P.char '}' >> return [])
-     <|>     (P.char '{' >> members <* P.char '}')
+object = P.char '{' >> (try (ws >> P.char '}' >> return []) <|> (members <* P.char '}'))
 
 members :: Parser [(T.Text, J.Value)]
 members = (:) <$> member <*> many (P.char ',' >> member)
@@ -36,8 +35,7 @@ member = (,)
      <*> element
 
 array :: Parser [J.Value]
-array = try (P.char '[' >> ws >> P.char ']' >> return [])
-    <|>     (P.char '[' >> elements <* P.char ']')
+array = P.char '[' >> (try (ws >> P.char ']' >> return []) <|> (elements <* P.char ']'))
 
 elements :: Parser [J.Value]
 elements = (:) <$> element <*> many (P.char ',' >> element)
