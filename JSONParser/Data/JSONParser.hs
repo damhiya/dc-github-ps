@@ -134,15 +134,15 @@ exponent = try exponent' <|> return 0
       try (P.char 'E') <|> P.char 'e'
       s <- sign
       ds <- digits
-      let e = toInt ds
+      let e = toInt 0 ds
       if s
         then return (-e)
         else return e
     sign = try (P.char '+' >> return False)
        <|> try (P.char '-' >> return True)
        <|> return False
-    toInt [x] = x
-    toInt (x:xs) = 10*x + toInt xs
+    toInt n [] = n
+    toInt n (x:xs) = toInt (10*n + x) xs
 
 ws :: Parser ()
 ws = try (P.char ' '  >> ws)
