@@ -26,7 +26,7 @@ object :: Parser [(T.Text, J.Value)]
 object = char '{' >> (try (ws >> char '}' >> return []) <|> (members <* char '}'))
 
 members :: Parser [(T.Text, J.Value)]
-members = (:) <$> member <*> many (char ',' >> member)
+members = sepBy1 member (char ',')
 
 member :: Parser (T.Text, J.Value)
 member = (,)
@@ -38,7 +38,7 @@ array :: Parser [J.Value]
 array = char '[' >> (try (ws >> char ']' >> return []) <|> (elements <* char ']'))
 
 elements :: Parser [J.Value]
-elements = (:) <$> element <*> many (char ',' >> element)
+elements = sepBy1 element (char ',')
 
 element :: Parser J.Value
 element = ws >> value <* ws
