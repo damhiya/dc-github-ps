@@ -178,7 +178,7 @@ solveNonogram rds cds = runST $ do
               else i
 
         filterCands :: Line -> [(Int, Line)] -> [(Int, Line)]
-        filterCands base cs = filter p cs
+        filterCands base = filter p
           where
             p c = execState (V.zipWithM (\x y -> modify (&& (x `cand` y /= bottom))) base (snd c)) True
 
@@ -198,7 +198,7 @@ solveNonogram rds cds = runST $ do
     readRow board i = V.freeze $ M.slice (c*i) c board
     
     writeRow :: U.MVector s Cell -> Int -> Line -> ST s ()
-    writeRow board i v = V.imapM_ (\j x -> M.write board (c*i+j) x) v
+    writeRow board i = V.imapM_ (\j x -> M.write board (c*i+j) x)
 
     readCol :: U.MVector s Cell -> Int -> ST s Line
     readCol board j = do
@@ -209,7 +209,7 @@ solveNonogram rds cds = runST $ do
       V.unsafeFreeze v
 
     writeCol :: U.MVector s Cell -> Int -> Line -> ST s ()
-    writeCol board j v = V.imapM_ (\i x -> M.write board (c*i+j) x) v
+    writeCol board j = V.imapM_ (\i x -> M.write board (c*i+j) x)
 
 showBoard :: [Line] -> String
 showBoard board = unlines $ map (V.foldr (\x -> (showCell x ++)) "") board
@@ -229,7 +229,6 @@ parseFile input = (rds, cds) where
 
 main = do
   args <- getArgs
-  inputs <- mapM readFile args
-  
-  mapM_ (mapM_ putStrLn) $ map (map showBoard . uncurry solveNonogram . parseFile) inputs
-  return ()
+  input <- readFile (head args)
+  let (rds, cds) = parseFile input
+  mapM_ (putStrLn . showBoard) (solveNonogram rds cds)
