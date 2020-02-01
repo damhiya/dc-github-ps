@@ -194,21 +194,16 @@ solveNonogram rds cds = runST $ do
           m :: Int -> Cell -> Cell -> State [Int] ()
           m i x y | x == y    = return ()
                   | otherwise = modify (i:)
-
+    
     readRow :: U.MVector s Cell -> Int -> ST s Line
     readRow board i = V.freeze $ M.slice (c*i) c board
     
     writeRow :: U.MVector s Cell -> Int -> Line -> ST s ()
     writeRow board i = V.imapM_ (\j x -> M.write board (c*i+j) x)
-
+    
     readCol :: U.MVector s Cell -> Int -> ST s Line
-    readCol board j = do
-      v <- M.new r
-      forM_ [0..r-1] $ \i -> do
-        x <- M.read board (c*i+j)
-        M.write v i x
-      V.unsafeFreeze v
-
+    readCol board j = V.generateM r (\i -> M.read board (c*i+j))
+    
     writeCol :: U.MVector s Cell -> Int -> Line -> ST s ()
     writeCol board j = V.imapM_ (\i x -> M.write board (c*i+j) x)
 
