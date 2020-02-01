@@ -14,7 +14,8 @@ import qualified Data.Vector.Generic.Mutable  as M hiding (MVector)
 
 import Control.Monad
 import Control.Monad.ST
-import Control.Monad.State
+import Control.Monad.Trans.Class
+import Control.Monad.Trans.State.Strict
 import Data.STRef
 
 import Data.List.Split
@@ -86,11 +87,11 @@ makeLines r fs is = if null fs
     
     go s = V.create $ do
       v <- M.unsafeNew r :: ST s (U.MVector s Cell)
-      i <- newSTRef 0
-      readSTRef i >>= (\i -> writeN v i h blank) >> modifySTRef i (+h)
-      (\f -> zipWithM_ f fs bs) $ \f b -> do
-        readSTRef i >>= (\i -> writeN v i f fill)  >> modifySTRef i (+f)
-        readSTRef i >>= (\i -> writeN v i b blank) >> modifySTRef i (+b)
+      flip execStateT 0 $ do
+        get >>= (\i -> lift $ writeN v i h blank) >> modify (+h)
+        (\f -> zipWithM_ f fs bs) $ \f b -> do
+          get >>= (\i -> lift $ writeN v i f fill)  >> modify (+f)
+          get >>= (\i -> lift $ writeN v i b blank) >> modify (+b)
       return v
       where
         h:bs = mapi (+1) s
