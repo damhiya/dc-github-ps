@@ -73,6 +73,15 @@ mapi f (x:xs) = x : go xs where
 writeN :: U.Unbox a => U.MVector s a -> Int -> Int -> a -> ST s ()
 writeN v i n x = forM_ (take n [i..]) $ \i -> M.write v i x
 
+numberOfCands :: Int -> LineData -> Int
+numberOfCands r fs = mchoose n k
+  where
+    blockNum = length fs
+    blankNum = r - sum fs
+    gapNum   = blockNum - 1
+    n = blockNum + 1
+    k = blankNum - gapNum
+
 makeLines :: Int -> LineData -> [Int] -> [(Int, Line)]
 makeLines r fs is = if null fs
   then zip is [V.replicate r blank]
@@ -103,8 +112,8 @@ solveNonogram :: V.Vector LineData -> V.Vector LineData -> [[Line]]
 solveNonogram rds cds = runST $ do
   let rq = S.fromAscList [0..r-1]
       cq = S.fromAscList [0..c-1]
-  rcs <- M.replicate r [0..]
-  ccs <- M.replicate r [0..]
+  rcs <- V.thaw $ V.map (enumFromTo 0 . subtract 1 . numberOfCands c) rds
+  ccs <- V.thaw $ V.map (enumFromTo 0 . subtract 1 . numberOfCands r) cds
   board <- M.replicate (r*c) top
   solutions <- go rq cq rcs ccs board
   mapM format solutions
